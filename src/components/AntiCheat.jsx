@@ -3,28 +3,75 @@ import supabase from '../lib/supabase';
 import DevToolsWarning from './DevToolsWarning';
 
 /**
+ * Robust check to detect if client is running on a mobile phone or tablet.
+ * Mobile browsers do not have docked developer tools, and screen rotation,
+ * touch gestures, virtual keyboards, and browser chrome cause dimension changes.
+ */
+export const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+
+  const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+
+  // 1. User Agent string checks
+  if (
+    /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|crios|fxios|tablet|silk|kindle|samsung|xiaomi|huawei|oppo|vivo|redmi/i.test(
+      ua
+    )
+  ) {
+    return true;
+  }
+
+  // 2. Client Hints API (modern Android Chrome, etc.)
+  if (navigator.userAgentData?.mobile === true) {
+    return true;
+  }
+
+  // 3. Touch device without fine mouse pointer (mobile phones & tablets)
+  const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  const isCoarsePointer =
+    typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  const isHoverNone =
+    typeof window.matchMedia === 'function' && window.matchMedia('(hover: none)').matches;
+
+  if (hasTouch && (isCoarsePointer || isHoverNone)) {
+    return true;
+  }
+
+  // 4. Mobile screen dimension heuristics
+  if (typeof window.screen !== 'undefined') {
+    const minScreenDim = Math.min(window.screen.width, window.screen.height);
+    if (minScreenDim < 600 && hasTouch) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
  * AntiCheat Component
- * Enforces CTF integrity by blocking keyboard shortcuts, right-clicks,
- * detecting open DevTools via multiple heuristics, and disqualifying the team.
+ * Enforces CTF integrity on PC/Desktop browsers by blocking shortcuts, right-clicks,
+ * detecting open DevTools, and disqualifying the team.
  *
- * Props:
- *  - teamId: string
- *  - gameId: string
- *  - children: ReactNode
- *  - onForfeit: (teamId: string, reason: string) => void
+ * Automatically bypasses on mobile devices so screen rotations and virtual keyboards
+ * never trigger false disqualifications.
  */
 export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
+  // Mobile devices are completely exempted from AntiCheat
+  const isMobile = isMobileDevice();
+
   const [acknowledged, setAcknowledged] = useState(() => {
-    // Check if user previously acknowledged anti-cheat warning for this session
+    if (isMobile) return true;
     return sessionStorage.getItem(`traz_anticheat_ack_${teamId}`) === 'true';
   });
   const [isForfeited, setIsForfeited] = useState(false);
   const [forfeitReason, setForfeitReason] = useState('');
   const forfeitTriggeredRef = useRef(false);
 
-  // Trigger Forfeit routine (disqualification)
+  // Trigger Forfeit routine (disqualification) - only operates on desktop
   const triggerForfeit = useCallback(
     async (reason = 'devtools_detected') => {
+      if (isMobileDevice()) return; // Never forfeit mobile clients
       if (forfeitTriggeredRef.current) return;
       forfeitTriggeredRef.current = true;
 
@@ -78,7 +125,7 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
           console.error('[AntiCheat] Failed to update teams forfeit:', err);
         }
 
-        // 3. Broadcast on forfeit_events channel so admin dashboard picks it up
+        // 3. Broadcast on forfeit_events channel
         try {
           const broadcastChannel = supabase.channel('forfeit_events');
           broadcastChannel.subscribe((status) => {
@@ -109,8 +156,10 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
     setAcknowledged(true);
   };
 
-  // 1. Block Keyboard Shortcuts & Right-click context menu
+  // 1. Block Keyboard Shortcuts & Right-click context menu (Desktop Only)
   useEffect(() => {
+    if (isMobile) return;
+
     const handleKeyDown = (e) => {
       // Check for F12
       if (e.key === 'F12' || e.keyCode === 123) {
@@ -123,9 +172,7 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
       if (isCtrlOrMeta) {
-        // Ctrl+Shift+I (Inspect)
-        // Ctrl+Shift+J (Console)
-        // Ctrl+Shift+C (Inspect Element)
+        // Ctrl+Shift+I (Inspect), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspect Element)
         if (e.shiftKey) {
           const keyUpper = e.key ? e.key.toUpperCase() : '';
           if (
@@ -165,28 +212,15 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('contextmenu', handleContextMenu, true);
     };
-  }, [triggerForfeit]);
+  }, [isMobile, triggerForfeit]);
 
-  // 2. DevTools Heuristic Detection
+  // 2. DevTools Heuristic Detection (Desktop Only)
   useEffect(() => {
-    if (!acknowledged || isForfeited) return;
+    if (isMobile || !acknowledged || isForfeited) return;
 
     // Detection Method a: Window dimensions difference check
     const checkDimensions = () => {
-      // Mobile / tablet check:
-      // Mobile browsers (iOS Safari, Android Chrome) do not have docked DevTools.
-      // On mobile devices, outerWidth/outerHeight (physical device pixels) vastly differs
-      // from innerWidth/innerHeight (CSS pixels), and rotating the phone or popping up the
-      // virtual keyboard triggers large dimension diffs.
-      const isMobile =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        (typeof window !== 'undefined' &&
-          ('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
-          Math.min(window.screen.width, window.screen.height) < 1024);
-
-      if (isMobile) {
-        return;
-      }
+      if (isMobileDevice()) return;
 
       const widthDiff = window.outerWidth - window.innerWidth;
       const heightDiff = window.outerHeight - window.innerHeight;
@@ -199,6 +233,7 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
 
     // Detection Method b: Debugger statement timing check
     const checkDebuggerTiming = () => {
+      if (isMobileDevice()) return;
       const start = performance.now();
       // eslint-disable-next-line no-debugger
       debugger;
@@ -210,6 +245,7 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
 
     // Detection Method c: Console logging getter trick
     const checkConsoleGetter = () => {
+      if (isMobileDevice()) return;
       const devtoolsDetector = {};
       let getterTriggered = false;
 
@@ -221,17 +257,15 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
         },
       });
 
-      // When DevTools is open, console.dir / console.log reads property getters
       console.log('%c', devtoolsDetector);
       if (getterTriggered) {
         triggerForfeit('console_getter_detected');
       }
     };
 
-    // Initial checks and resize listener
     window.addEventListener('resize', checkDimensions);
 
-    // Detection Method d: Check at an interval (every 2 seconds)
+    // Run checks at an interval
     const intervalId = setInterval(() => {
       checkDimensions();
       checkDebuggerTiming();
@@ -242,13 +276,17 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
       window.removeEventListener('resize', checkDimensions);
       clearInterval(intervalId);
     };
-  }, [acknowledged, isForfeited, triggerForfeit]);
+  }, [isMobile, acknowledged, isForfeited, triggerForfeit]);
 
-  // Full-Screen Red Overlay when disqualified
+  // If mobile, render cleanly without warning or forfeit overlay
+  if (isMobile) {
+    return <>{children}</>;
+  }
+
+  // Full-Screen Red Overlay when disqualified (Desktop Only)
   if (isForfeited) {
     return (
       <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-red-950/95 text-white p-6 font-mono select-none overflow-hidden backdrop-blur-xl">
-        {/* Flashing scanlines and warning border */}
         <div className="absolute inset-0 border-8 border-red-600 pointer-events-none animate-pulse" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-600/30 via-red-950/80 to-black pointer-events-none" />
 
@@ -291,8 +329,7 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
               </span>
             </p>
             <p className="text-gray-400 text-xs">
-              This incident has been recorded and submitted to game
-              administrators.
+              This incident has been recorded and submitted to game administrators.
             </p>
           </div>
 
@@ -304,12 +341,11 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
     );
   }
 
-  // Pre-game Warning Modal
+  // Pre-game Warning Modal (Desktop Only)
   if (!acknowledged) {
     return (
       <>
         <DevToolsWarning onAcknowledge={handleAcknowledge} />
-        {/* Render child blurred in background while waiting for acknowledgment */}
         <div className="filter blur-md pointer-events-none select-none h-screen w-screen overflow-hidden">
           {children}
         </div>
@@ -317,6 +353,6 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
     );
   }
 
-  // Standard Render
+  // Standard Render (Desktop)
   return <>{children}</>;
 }
