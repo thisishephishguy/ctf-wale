@@ -173,6 +173,21 @@ export default function AntiCheat({ teamId, gameId, children, onForfeit }) {
 
     // Detection Method a: Window dimensions difference check
     const checkDimensions = () => {
+      // Mobile / tablet check:
+      // Mobile browsers (iOS Safari, Android Chrome) do not have docked DevTools.
+      // On mobile devices, outerWidth/outerHeight (physical device pixels) vastly differs
+      // from innerWidth/innerHeight (CSS pixels), and rotating the phone or popping up the
+      // virtual keyboard triggers large dimension diffs.
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        (typeof window !== 'undefined' &&
+          ('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
+          Math.min(window.screen.width, window.screen.height) < 1024);
+
+      if (isMobile) {
+        return;
+      }
+
       const widthDiff = window.outerWidth - window.innerWidth;
       const heightDiff = window.outerHeight - window.innerHeight;
       const threshold = 160;
