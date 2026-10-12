@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#0a0a0a"/>
+  <defs>
+    <radialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9"/>
+      <stop offset="70%" stop-color="#0284c7" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#0369a1" stop-opacity="0.2"/>
+    </radialGradient>
+    <filter id="glow1" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <polygon points="100,35 155,145 45,145" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.4"/>
+  <polygon points="100,48 145,138 55,138" fill="url(#blueGlow)" filter="url(#glow1)"/>
+  <polygon points="100,75 125,125 75,125" fill="#7dd3fc" opacity="0.6"/>
+  <circle cx="100" cy="110" r="8" fill="#ffffff" opacity="0.85"/>
+  <text x="100" y="180" font-family="monospace" font-size="10" fill="#38bdf8" opacity="0.6" text-anchor="middle" letter-spacing="2">FRAGMENT // 1</text>
+</svg>

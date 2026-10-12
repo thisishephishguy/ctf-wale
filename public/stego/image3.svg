@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#0a0a0a"/>
+  <defs>
+    <radialGradient id="purpleGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c084fc" stop-opacity="0.9"/>
+      <stop offset="70%" stop-color="#9333ea" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#581c87" stop-opacity="0.2"/>
+    </radialGradient>
+    <filter id="glow3" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <polygon points="152,100 126,145 74,145 48,100 74,55 126,55" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.4"/>
+  <polygon points="144,100 122,138 78,138 56,100 78,62 122,62" fill="url(#purpleGlow)" filter="url(#glow3)"/>
+  <polygon points="126,100 113,122 87,122 74,100 87,78 113,78" fill="#d8b4fe" opacity="0.6"/>
+  <circle cx="100" cy="100" r="8" fill="#ffffff" opacity="0.85"/>
+  <text x="100" y="180" font-family="monospace" font-size="10" fill="#c084fc" opacity="0.6" text-anchor="middle" letter-spacing="2">FRAGMENT // 3</text>
+</svg>
