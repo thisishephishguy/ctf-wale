@@ -1582,8 +1582,6 @@ export default function AdminDashboard() {
         <footer className="pt-6 border-t border-slate-900 text-[11px] text-slate-600 flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-2">
             <span>TRAZ CTF PLATFORM // COMMAND SURFACE v3.0</span>
-            <span className="text-slate-800">|</span>
-            <span className="text-slate-500 font-mono">Made by Taha</span>
           </div>
           <div className="flex gap-4 font-mono">
             <span>SECURE MATRIX</span>

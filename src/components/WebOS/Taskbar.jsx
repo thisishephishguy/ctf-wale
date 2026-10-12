@@ -164,8 +164,6 @@ export default function Taskbar({
           <div className="p-3 bg-black/30 border-t border-white/5 flex items-center justify-between">
             <div className="flex items-center space-x-2 text-xs text-gray-400">
               <span className="font-medium text-gray-300">{teamName}</span>
-              <span className="text-gray-600">•</span>
-              <span className="text-[10px] text-gray-400 font-mono">Made by Taha</span>
             </div>
 
             <button

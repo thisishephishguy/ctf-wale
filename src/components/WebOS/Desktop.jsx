@@ -695,11 +695,6 @@ export default function Desktop({
         );
       })}
 
-      {/* Corner Watermark */}
-      <div className="absolute bottom-13 right-3 z-10 pointer-events-none text-[10px] text-white/25 font-mono tracking-widest select-none">
-        Made by Taha
-      </div>
-
       {/* Bottom Windows 11 Taskbar */}
       <Taskbar
         openWindows={openWindows}

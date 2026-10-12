@@ -717,8 +717,6 @@ export default function PasswordBreach({
       <footer className="relative z-10 w-full border-t border-green-900/40 bg-black/90 px-6 py-2.5 flex items-center justify-between text-[11px] text-gray-500">
         <div className="flex items-center space-x-3">
           <span>TRAZ CYBER CTF // INTRUSION SUITE v2.4</span>
-          <span className="text-gray-700">|</span>
-          <span className="text-gray-400 font-mono text-[10px]">Made by Taha</span>
         </div>
         <div className="flex items-center space-x-2">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
